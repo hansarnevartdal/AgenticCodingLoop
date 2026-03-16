@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code review specialist. Reviews changes, identifies issues, and prepares handover summaries.
-tools: [vscode/askQuestions, vscode/memory, execute/getTerminalOutput, execute/runInTerminal, read, agent, browser, 'nuget/*', search, web, todo]
+tools: [vscode/askQuestions, vscode/memory, execute/getTerminalOutput, execute/runInTerminal, read, agent, browser, 'nuget/*', search, web, todo, signal_no_more_work]
 model: Claude Opus 4.6
 handoffs:
   - label: Implement Fixes

@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Senior .NET developer. Follows strict testing and hygiene standards.
-tools:  [vscode/askQuestions, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/testFailure, read, agent, browser, 'nuget/*', edit, search, web/fetch, todo]
+tools:  [vscode/askQuestions, execute/getTerminalOutput, execute/awaitTerminal, execute/killTerminal, execute/createAndRunTask, execute/runInTerminal, execute/testFailure, read, agent, browser, 'nuget/*', edit, search, web/fetch, todo, signal_no_more_work]
 model: [GPT-5.4, Claude Opus 4.6]
 handoffs:
   - label: Request Review

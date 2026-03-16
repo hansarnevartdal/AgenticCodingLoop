@@ -1,0 +1,15 @@
+## .NET build outputs
+bin/
+obj/
+
+## IDE files
+.vs/
+.idea/
+*.user
+*.suo
+
+## Runtime artifacts
+.agent-loop/
+
+## Cache files
+*.cache
