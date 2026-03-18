@@ -1,10 +1,13 @@
-﻿using AgenticCodingLoop.Configuration;
+﻿using AgenticCodingLoop;
+using AgenticCodingLoop.Configuration;
 using AgenticCodingLoop.Bootstrap;
 using AgenticCodingLoop.Loops;
 
 // ── Validate inputs ──────────────────────────────────────────────────────────
 var config = WorkspaceConfig.Parse(args);
 if (config is null) { return 1; }
+
+var debugConsole = new SessionDebugConsole(config.Debug);
 
 using var shutdown = new CancellationTokenSource();
 
@@ -24,15 +27,15 @@ var failed = false;
 
 try
 {
-    await using var bootstrap = await BootstrapContext.CreateAsync(config, shutdown.Token);
+    await using var bootstrap = await BootstrapContext.CreateAsync(config, debugConsole, shutdown.Token);
 
     // ── Monitor and worker loops ─────────────────────────────────────────────
     Console.WriteLine("═══ Monitoring ═══");
     Console.WriteLine();
 
-    await using var monitorLoop = await MonitorLoop.CreateAsync(bootstrap.Client, bootstrap.SourceSkills);
-    await using var implementationLoop = await ImplementationLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills);
-    await using var reviewLoop = await ReviewLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills);
+    await using var monitorLoop = await MonitorLoop.CreateAsync(bootstrap.Client, bootstrap.SourceSkills, debugConsole);
+    await using var implementationLoop = await ImplementationLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills, debugConsole);
+    await using var reviewLoop = await ReviewLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills, debugConsole);
     Task? implementerTask = null;
     Task? reviewerTask = null;
 

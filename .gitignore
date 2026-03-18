@@ -10,6 +10,7 @@ obj/
 
 ## Runtime artifacts
 .agent-loop/
+.github/session-state/
 
 ## Cache files
 *.cache

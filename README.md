@@ -9,13 +9,19 @@ The demo is intentionally simple: GitHub is the system of record, the orchestrat
 Command:
 
 ```bash
-dotnet run --project src/AgenticCodingLoop -- <githubRepoUrl> [workingFolder]
+dotnet run --project src/AgenticCodingLoop -- [--debug] <githubRepoUrl> [workingFolder]
 ```
 
 Example:
 
 ```bash
 dotnet run --project src/AgenticCodingLoop -- https://github.com/owner/my-repo
+```
+
+Debug mode:
+
+```bash
+dotnet run --project src/AgenticCodingLoop -- --debug https://github.com/owner/my-repo
 ```
 
 Optional override:
@@ -35,7 +41,7 @@ What you need before running:
 
 - a GitHub repository with open issues to work on
 - `gh` authenticated against GitHub
-- Copilot CLI authenticated for SDK-backed sessions
+- Copilot CLI installed on PATH and authenticated for SDK-backed sessions
 
 Stop the app with `Ctrl+C`.
 

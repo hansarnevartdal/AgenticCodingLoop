@@ -1,3 +1,4 @@
+using AgenticCodingLoop;
 using AgenticCodingLoop.Configuration;
 using GitHub.Copilot.SDK;
 
@@ -6,11 +7,14 @@ namespace AgenticCodingLoop.Bootstrap;
 internal static class RepositorySetup
 {
     private static readonly TimeSpan PromptTimeout = TimeSpan.FromMinutes(5);
+    private const string AgentName = "Setup";
+    private const ConsoleColor AgentColor = ConsoleColor.Yellow;
 
     public static async Task RunAsync(
         CopilotClient client,
         WorkspaceConfig config,
         string sourceSkills,
+        SessionDebugConsole debugConsole,
         CancellationToken ct)
     {
         Console.WriteLine("═══ Repository Setup ═══");
@@ -33,7 +37,7 @@ internal static class RepositorySetup
             ? $"""Run `git -C "{repoDirectory}" fetch --all && git -C "{repoDirectory}" pull` to get the latest changes."""
             : $"""Clone the repository: `git clone {config.GitHubRepoUrl} "{repoDirectory}"`""";
 
-        var response = await session.SendAndWaitAsync(new MessageOptions
+        var result = await debugConsole.SendAndReadContent(session, AgentName, AgentColor, new MessageOptions
         {
             Prompt = $"""
                     Set up the repository for development.
@@ -49,9 +53,11 @@ internal static class RepositorySetup
                     3. List open issues: `gh issue list --state open` and report whether there is work to do.
                     """
         }, PromptTimeout, ct);
-        var result = response?.Data?.Content ?? string.Empty;
 
-        Console.WriteLine($"  Setup: {result}");
-        Console.WriteLine();
+        if (!debugConsole.IsEnabled)
+        {
+            Console.WriteLine($"  Setup: {result}");
+            Console.WriteLine();
+        }
     }
 }

@@ -1,6 +1,6 @@
 namespace AgenticCodingLoop.Configuration;
 
-internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder)
+internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder, bool Debug)
 {
     private const string AppFolderName = "AgenticCodingLoop";
 
@@ -8,15 +8,36 @@ internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder)
 
     public static WorkspaceConfig? Parse(string[] args)
     {
-        if (args.Length < 1)
+        var debug = false;
+        var positionalArgs = new List<string>(capacity: 2);
+
+        foreach (var arg in args)
         {
-            Console.Error.WriteLine("Usage: AgenticCodingLoop <githubRepoUrl> [tempFolder]");
+            if (arg.Equals("--debug", StringComparison.OrdinalIgnoreCase))
+            {
+                debug = true;
+                continue;
+            }
+
+            if (arg.StartsWith("--", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine($"Unknown option: {arg}");
+                Console.Error.WriteLine("Usage: AgenticCodingLoop [--debug] <githubRepoUrl> [tempFolder]");
+                return null;
+            }
+
+            positionalArgs.Add(arg);
+        }
+
+        if (positionalArgs.Count is < 1 or > 2)
+        {
+            Console.Error.WriteLine("Usage: AgenticCodingLoop [--debug] <githubRepoUrl> [tempFolder]");
             return null;
         }
 
-        var repoUrl = args[0];
-        var tempFolder = args.Length >= 2
-            ? Path.GetFullPath(args[1])
+        var repoUrl = positionalArgs[0];
+        var tempFolder = positionalArgs.Count == 2
+            ? Path.GetFullPath(positionalArgs[1])
             : GetDefaultTempFolder();
 
         if (!Uri.TryCreate(repoUrl, UriKind.Absolute, out var uri) ||
@@ -28,9 +49,13 @@ internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder)
 
         Console.WriteLine($"Repository: {repoUrl}");
         Console.WriteLine($"Working Folder: {tempFolder}");
+        if (debug)
+        {
+            Console.WriteLine("Debug Mode: enabled");
+        }
         Console.WriteLine();
 
-        return new WorkspaceConfig(repoUrl, tempFolder);
+        return new WorkspaceConfig(repoUrl, tempFolder, debug);
     }
 
     internal static string GetDefaultTempFolder()
