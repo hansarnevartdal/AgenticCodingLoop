@@ -20,7 +20,7 @@ All UI changes must:
 
 1. **Be verified with Playwright** — take a screenshot after the change is visible in the running app.
 2. **Update `docs/screenshots/`** — save the screenshot using the standardized component/page name.
-3. **Include screenshots in the PR** — embed them in the PR description using raw GitHub URLs.
+3. **Include screenshots in the PR** — embed them in the PR description using commit-pinned GitHub blob URLs with `?raw=1`.
 
 ## Screenshot Convention
 
@@ -74,8 +74,10 @@ $commitSha = git rev-parse HEAD
 # 6. Add screenshots as a PR comment
 gh pr comment <PR> --body "## UI Screenshots
 
-![Header](https://raw.githubusercontent.com/{owner}/{repo}/$commitSha/docs/screenshots/header.png)"
+![Header](https://github.com/{owner}/{repo}/blob/$commitSha/docs/screenshots/header.png?raw=1)"
 ```
+
+Use the `github.com/.../blob/<sha>/...?...raw=1` form instead of `raw.githubusercontent.com`. It works for public repositories and also renders correctly in private-repository PRs where raw URLs can break.
 
 See the [playwright-cli skill](../playwright-cli/SKILL.md) for full screenshot and browser automation commands.
 

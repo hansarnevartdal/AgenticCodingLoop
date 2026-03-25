@@ -74,7 +74,17 @@ try
         await ReapCompletedTasks(implementerTasks, "implementer");
         await ReapCompletedTasks(reviewerTasks, "reviewer");
 
-        var decision = await monitorLoop.ExecuteAsync(shutdown.Token);
+        MonitorDecision decision;
+        try
+        {
+            decision = await monitorLoop.ExecuteAsync(shutdown.Token);
+        }
+        catch (Exception ex) when (ex is TimeoutException or InvalidOperationException)
+        {
+            Console.Error.WriteLine($"Monitor error (will retry next cycle): {ex.Message}");
+            await Task.Delay(TimeSpan.FromSeconds(30), shutdown.Token);
+            continue;
+        }
 
         var implementersToStart = Math.Max(0, Math.Min(decision.ImplementersToStart, config.MaxParallel - implementerTasks.Count));
         for (var i = 0; i < implementersToStart; i++)
@@ -110,8 +120,8 @@ try
                 shutdown.Token));
         }
 
-        // Keep the demo responsive without turning the monitor loop into a busy poll.
-        await Task.Delay(TimeSpan.FromSeconds(2), shutdown.Token);
+        // Give workers time to make progress before the monitor checks again.
+        await Task.Delay(TimeSpan.FromSeconds(30), shutdown.Token);
     }
 }
 catch (TimeoutException ex)

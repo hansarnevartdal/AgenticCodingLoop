@@ -8,7 +8,7 @@ namespace AgenticCodingLoop.Features.Monitor;
 
 internal sealed class MonitorFeature : IAsyncDisposable
 {
-    private static readonly TimeSpan PromptTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan PromptTimeout = TimeSpan.FromMinutes(10);
     private const string AgentName = "Monitor";
     private const ConsoleColor AgentColor = ConsoleColor.Blue;
 

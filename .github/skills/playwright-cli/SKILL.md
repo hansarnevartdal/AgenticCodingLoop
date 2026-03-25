@@ -179,7 +179,7 @@ playwright-cli install-browser
 
 The `gh` CLI has no built-in command for attaching image files to issue comments, and `gh gist create` rejects binary files. The GitHub asset upload API (`uploads.github.com`) is not reliably available from CLI environments.
 
-**Reliable method: commit screenshots to the feature branch and embed via raw GitHub URL.**
+**Reliable method: commit screenshots to the feature branch and embed via a commit-pinned GitHub blob URL with `?raw=1`.**
 
 Screenshots live in `docs/screenshots/` using **standardized, page/component-based names** (e.g., `header.png`, `assistant-page.png`). This makes them living documentation — when the UI changes, the file is updated in place and the PR diff shows the visual change automatically.
 
@@ -206,8 +206,10 @@ $commitSha = git rev-parse HEAD
 # 5. Embed in the PR description or issue comment using a commit-pinned URL
 gh pr comment <PR> --body "## UI Screenshots
 
-![Header](https://raw.githubusercontent.com/{owner}/{repo}/$commitSha/docs/screenshots/header.png)"
+![Header](https://github.com/{owner}/{repo}/blob/$commitSha/docs/screenshots/header.png?raw=1)"
 ```
+
+Prefer the `github.com/.../blob/<sha>/...?...raw=1` form over `raw.githubusercontent.com`. The blob URL works in PRs for both public and private repositories, while raw URLs often fail to render for private repos.
 
 > **Note:** Do not clean up `docs/screenshots/` — screenshots are long-lived documentation and should be updated in place whenever the corresponding UI changes.
 
