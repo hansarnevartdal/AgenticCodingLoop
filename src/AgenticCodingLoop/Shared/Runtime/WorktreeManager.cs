@@ -8,6 +8,10 @@ internal static class WorktreeManager
     {
         var worktreePath = GetWorktreePath(repoDirectory, workerName, workerId);
 
+        // Prune stale git metadata first so a previous crashed run cannot block re-adding the
+        // same worktree path even when the directory is already gone.
+        await TryGitAsync(repoDirectory, "worktree prune", ct);
+
         if (Directory.Exists(worktreePath))
         {
             await ForceRemoveWorktreeAsync(repoDirectory, worktreePath, ct);
@@ -33,7 +37,8 @@ internal static class WorktreeManager
     internal static string GetWorktreePath(string repoDirectory, string workerName, int workerId)
     {
         var parent = Path.GetDirectoryName(repoDirectory) ?? repoDirectory;
-        return Path.Combine(parent, "worktrees", $"{workerName}-{workerId}");
+        var repoName = Path.GetFileName(repoDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return Path.Combine(parent, "worktrees", repoName, $"{workerName}-{workerId}");
     }
 
     /// <summary>
@@ -69,13 +74,20 @@ internal static class WorktreeManager
 
     private static async Task GitAsync(string workingDirectory, string arguments, CancellationToken ct)
     {
-        if (!await TryGitAsync(workingDirectory, arguments, ct))
+        var result = await RunGitAsync(workingDirectory, arguments, ct);
+        if (!result.Success)
         {
-            throw new InvalidOperationException($"git {arguments} failed.");
+            throw new InvalidOperationException($"git {arguments} failed (exit {result.ExitCode}): {result.StandardError}");
         }
     }
 
     private static async Task<bool> TryGitAsync(string workingDirectory, string arguments, CancellationToken ct)
+    {
+        var result = await RunGitAsync(workingDirectory, arguments, ct);
+        return result.Success;
+    }
+
+    private static async Task<GitCommandResult> RunGitAsync(string workingDirectory, string arguments, CancellationToken ct)
     {
         var psi = new ProcessStartInfo("git", arguments)
         {
@@ -94,8 +106,10 @@ internal static class WorktreeManager
         await process.WaitForExitAsync(ct);
 
         _ = await stdoutTask;
-        _ = await stderrTask;
+        var stderr = await stderrTask;
 
-        return process.ExitCode == 0;
+        return new GitCommandResult(process.ExitCode == 0, process.ExitCode, stderr.Trim());
     }
+
+    private sealed record GitCommandResult(bool Success, int ExitCode, string StandardError);
 }
