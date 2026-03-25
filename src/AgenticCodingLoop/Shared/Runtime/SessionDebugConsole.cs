@@ -1,11 +1,9 @@
 using GitHub.Copilot.SDK;
 
-namespace AgenticCodingLoop;
+namespace AgenticCodingLoop.Shared.Runtime;
 
 internal sealed class SessionDebugConsole(bool enabled)
 {
-    private static readonly object SyncRoot = new();
-
     public bool IsEnabled => enabled;
 
     public async Task<string> SendAndReadContent(
@@ -34,7 +32,7 @@ internal sealed class SessionDebugConsole(bool enabled)
 
     private static void WriteBlock(string agentName, ConsoleColor color, string label, string content)
     {
-        lock (SyncRoot)
+        lock (ConsoleWriteLock.SyncRoot)
         {
             var previousColor = Console.ForegroundColor;
 

@@ -1,28 +1,45 @@
-namespace AgenticCodingLoop.Configuration;
+namespace AgenticCodingLoop.Host;
 
-internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder, bool Debug)
+internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder, bool Debug, int MaxParallel = 1)
 {
     private const string AppFolderName = "AgenticCodingLoop";
+    private const string UsageLine = "Usage: AgenticCodingLoop [--debug] [--max-parallel <N>] <githubRepoUrl> [tempFolder]";
 
     public string RepoDirectory => Path.Combine(TempFolder, ExtractRepoName(GitHubRepoUrl));
 
     public static WorkspaceConfig? Parse(string[] args)
     {
         var debug = false;
+        var maxParallel = 1;
         var positionalArgs = new List<string>(capacity: 2);
 
-        foreach (var arg in args)
+        for (var i = 0; i < args.Length; i++)
         {
+            var arg = args[i];
+
             if (arg.Equals("--debug", StringComparison.OrdinalIgnoreCase))
             {
                 debug = true;
                 continue;
             }
 
+            if (arg.Equals("--max-parallel", StringComparison.OrdinalIgnoreCase))
+            {
+                if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out maxParallel) || maxParallel < 1)
+                {
+                    Console.Error.WriteLine("--max-parallel requires a positive integer value.");
+                    Console.Error.WriteLine(UsageLine);
+                    return null;
+                }
+
+                i++;
+                continue;
+            }
+
             if (arg.StartsWith("--", StringComparison.Ordinal))
             {
                 Console.Error.WriteLine($"Unknown option: {arg}");
-                Console.Error.WriteLine("Usage: AgenticCodingLoop [--debug] <githubRepoUrl> [tempFolder]");
+                Console.Error.WriteLine(UsageLine);
                 return null;
             }
 
@@ -31,7 +48,7 @@ internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder, 
 
         if (positionalArgs.Count is < 1 or > 2)
         {
-            Console.Error.WriteLine("Usage: AgenticCodingLoop [--debug] <githubRepoUrl> [tempFolder]");
+            Console.Error.WriteLine(UsageLine);
             return null;
         }
 
@@ -49,18 +66,19 @@ internal sealed record WorkspaceConfig(string GitHubRepoUrl, string TempFolder, 
 
         Console.WriteLine($"Repository: {repoUrl}");
         Console.WriteLine($"Working Folder: {tempFolder}");
+        Console.WriteLine($"Max Parallel Workers: {maxParallel}");
         if (debug)
         {
             Console.WriteLine("Debug Mode: enabled");
         }
         Console.WriteLine();
 
-        return new WorkspaceConfig(repoUrl, tempFolder, debug);
+        return new WorkspaceConfig(repoUrl, tempFolder, debug, maxParallel);
     }
 
     internal static string GetDefaultTempFolder()
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localAppData = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, AppFolderName);
     }
 

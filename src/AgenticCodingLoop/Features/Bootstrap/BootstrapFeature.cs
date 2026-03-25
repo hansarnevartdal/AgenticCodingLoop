@@ -1,10 +1,11 @@
-using AgenticCodingLoop;
-using AgenticCodingLoop.Configuration;
+using AgenticCodingLoop.Host;
+using AgenticCodingLoop.Shared.HostEnvironment;
+using AgenticCodingLoop.Shared.Runtime;
 using GitHub.Copilot.SDK;
 
-namespace AgenticCodingLoop.Bootstrap;
+namespace AgenticCodingLoop.Features.Bootstrap;
 
-internal sealed class BootstrapContext : IAsyncDisposable
+internal sealed class BootstrapFeature : IAsyncDisposable
 {
     public CopilotClient Client { get; }
 
@@ -12,14 +13,25 @@ internal sealed class BootstrapContext : IAsyncDisposable
 
     public string SourceSkills { get; }
 
-    private BootstrapContext(CopilotClient client, string sourceGitHub, string sourceSkills)
+    public string CliPath { get; }
+
+    public IReadOnlyDictionary<string, string> ClientEnvironment { get; }
+
+    private BootstrapFeature(
+        CopilotClient client,
+        string sourceGitHub,
+        string sourceSkills,
+        string cliPath,
+        IReadOnlyDictionary<string, string> clientEnvironment)
     {
         Client = client;
         SourceGitHub = sourceGitHub;
         SourceSkills = sourceSkills;
+        CliPath = cliPath;
+        ClientEnvironment = clientEnvironment;
     }
 
-    public static async Task<BootstrapContext> CreateAsync(WorkspaceConfig config, SessionDebugConsole debugConsole, CancellationToken ct)
+    public static async Task<BootstrapFeature> ExecuteAsync(WorkspaceConfig config, SessionDebugConsole debugConsole, CancellationToken ct)
     {
         var sourceGitHub = SourceGitHubLocator.Find();
         if (sourceGitHub is null)
@@ -43,7 +55,9 @@ internal sealed class BootstrapContext : IAsyncDisposable
         Console.WriteLine("Copilot client started.");
         Console.WriteLine();
 
-        await RepositorySetup.RunAsync(setupClient, config, sourceSkills, debugConsole, ct);
+        await RepositorySetup.ExecuteAsync(setupClient, config, sourceSkills, debugConsole, ct);
+
+        await WorktreeManager.PruneAsync(config.RepoDirectory, ct);
 
         var client = new CopilotClient(new CopilotClientOptions
         {
@@ -53,11 +67,8 @@ internal sealed class BootstrapContext : IAsyncDisposable
         });
         await client.StartAsync();
 
-        return new BootstrapContext(client, sourceGitHub, sourceSkills);
+        return new BootstrapFeature(client, sourceGitHub, sourceSkills, cliPath, clientEnvironment);
     }
 
-    public ValueTask DisposeAsync()
-    {
-        return Client.DisposeAsync();
-    }
+    public ValueTask DisposeAsync() => Client.DisposeAsync();
 }

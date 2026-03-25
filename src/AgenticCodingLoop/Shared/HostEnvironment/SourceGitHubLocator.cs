@@ -1,4 +1,4 @@
-namespace AgenticCodingLoop.Configuration;
+namespace AgenticCodingLoop.Shared.HostEnvironment;
 
 internal static class SourceGitHubLocator
 {

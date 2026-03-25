@@ -44,7 +44,7 @@ The runtime disables interactive Git and GitHub prompts and does not enable SDK 
 - the orchestration is polling-based, not event-driven
 - there is no advanced merge-conflict handling
 - only one implementer and one reviewer loop are modeled
-- there is no planning phase or backlog management inside the app
+- there is no separate planning phase or backlog management inside the app beyond the lightweight issue-plan comments in the implementation prompt
 - quality still depends heavily on issue quality and repository test coverage
 
 These are acceptable limitations because the demo is trying to teach the loop, not solve every software delivery problem.

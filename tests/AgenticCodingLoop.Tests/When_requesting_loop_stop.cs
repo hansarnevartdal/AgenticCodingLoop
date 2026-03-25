@@ -1,4 +1,5 @@
-using AgenticCodingLoop.Loops;
+using AgenticCodingLoop.Features.Implementer.Tools;
+using AgenticCodingLoop.Features.Reviewer.Tools;
 
 namespace AgenticCodingLoop.Tests;
 
@@ -7,7 +8,7 @@ public sealed class When_requesting_loop_stop
     [Fact]
     public void Should_mark_that_no_more_work_is_available()
     {
-        var signal = new LoopStopSignal("implementation");
+        var signal = new ImplementationStopTool();
 
         var message = signal.SignalNoMoreWork("No more issues remain.");
 
@@ -18,7 +19,7 @@ public sealed class When_requesting_loop_stop
     [Fact]
     public void Should_clear_the_signal_on_reset()
     {
-        var signal = new LoopStopSignal("review");
+        var signal = new ReviewStopTool();
         signal.SignalNoMoreWork("No more PRs remain.");
 
         signal.Reset();

@@ -92,6 +92,31 @@ gh issue comment 123 --body "Investigating this now."
 gh issue close 123
 ```
 
+### Issue Image Attachments
+
+Issues often contain screenshots (bug reports, UI mockups). **Always** check for images when picking up an issue and download them for vision context.
+
+```powershell
+# Extract image URLs from issue body (GitHub-hosted uploads)
+$body = gh issue view 123 --json body --jq .body
+$urls = [regex]::Matches($body, '!\[.*?\]\((https://[^\s)]+\.(?:png|jpg|jpeg|gif|webp))\)') |
+        ForEach-Object { $_.Groups[1].Value }
+
+# Also match bare <img src="..."> tags
+$urls += [regex]::Matches($body, '<img[^>]+src="(https://[^\s"]+\.(?:png|jpg|jpeg|gif|webp))"') |
+         ForEach-Object { $_.Groups[1].Value }
+
+# Download each image to a local folder
+$dir = '.github/issue-images'
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+foreach ($url in $urls) {
+    $name = [System.IO.Path]::GetFileName(([uri]$url).LocalPath)
+    Invoke-WebRequest -Uri $url -OutFile "$dir/$name"
+}
+```
+
+After downloading, **view each image** to understand the visual context before starting work. Delete the images when done (do not commit them).
+
 ### Actions Workflows
 
 ```powershell
@@ -118,3 +143,45 @@ For comprehensive pull request reviews:
 - Avoid opening terminal UIs when a JSON or plain-text alternative exists.
 - Never print tokens or secrets.
 - Review generated URLs and comments for sensitive data before posting.
+
+## Status Label Mutual Exclusivity
+
+The workflow uses `status:*` labels as mutually exclusive states. When transitioning to a new status, **always remove all other status labels first**, then add the new one.
+
+The full set of status labels:
+- `status:in-progress`
+- `status:ready-for-review`
+- `status:needs-work`
+- `status:approved`
+
+```powershell
+# Example: Mark a PR as ready-for-review (removing all other status labels)
+gh pr edit 123 --remove-label "status:in-progress" --remove-label "status:needs-work" --remove-label "status:approved" --add-label "status:ready-for-review"
+
+# Example: Mark an issue as in-progress (removing all other status labels)
+gh issue edit 123 --remove-label "status:ready-for-review" --remove-label "status:needs-work" --remove-label "status:approved" --add-label "status:in-progress"
+```
+
+Removing a label that is not present is a no-op and will not error, so always remove all others unconditionally.
+
+## Issue Commenting Workflow
+
+Use issue comments to maintain a clear audit trail of work:
+
+```powershell
+# Post implementation plan when picking up an issue
+gh issue comment 123 --body "## Implementation Plan
+- Approach: ...
+- Files to change: ...
+- Design decisions: ..."
+
+# Post completion summary when merging the PR
+gh issue comment 123 --body "## Completed
+- PR #456 merged
+- Changes: ...
+- Outcome: ..."
+
+# Post review outcome
+gh issue comment 123 --body "## Review: Approved
+PR #456 reviewed and approved. Ready to merge."
+```

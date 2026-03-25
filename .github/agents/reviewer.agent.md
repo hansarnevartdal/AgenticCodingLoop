@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code review specialist. Reviews changes, identifies issues, and prepares handover summaries.
-tools: [vscode/askQuestions, vscode/memory, execute/getTerminalOutput, execute/runInTerminal, read, agent, browser, 'nuget/*', search, web, todo, signal_no_more_work]
+tools: [vscode/askQuestions, vscode/memory, execute/getTerminalOutput, execute/runInTerminal, read, agent, browser, 'nuget/*', search, web, todo, signal_no_more_review_work]
 model: Claude Opus 4.6
 handoffs:
   - label: Implement Fixes
@@ -40,6 +40,8 @@ git log main..HEAD --oneline
 # View specific file changes
 git diff main -- path/to/file.cs
 ```
+
+**Issue Images:** If the PR is linked to an issue, download any attached images (see `github-cli` skill) and view them to understand expected UI behavior or bug context.
 
 ### 2. Analyze Changes
 - Load relevant skills (`dotnet-coding`, `dotnet-testing`, `github-cli`, etc.)

@@ -11,6 +11,8 @@ obj/
 ## Runtime artifacts
 .agent-loop/
 .github/session-state/
+/src/**/artifacts/
+/tests/**/artifacts/
 
 ## Cache files
 *.cache

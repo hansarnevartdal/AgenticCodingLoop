@@ -1,7 +1,7 @@
 using GitHub.Copilot.SDK;
 using Microsoft.Extensions.AI;
 
-namespace AgenticCodingLoop.Configuration;
+namespace AgenticCodingLoop.Shared.Runtime;
 
 internal static class WorkerSessionConfigFactory
 {
@@ -17,6 +17,7 @@ internal static class WorkerSessionConfigFactory
             Tools = tools,
             SkillDirectories = [sourceSkills],
             ReasoningEffort = reasoningEffort,
+            // The worker sessions are non-interactive by design, so permissions are auto-approved.
             OnPermissionRequest = PermissionHandler.ApproveAll
         };
 }

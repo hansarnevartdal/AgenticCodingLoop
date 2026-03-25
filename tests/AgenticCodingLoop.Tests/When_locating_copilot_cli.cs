@@ -1,4 +1,4 @@
-using AgenticCodingLoop.Configuration;
+using AgenticCodingLoop.Shared.HostEnvironment;
 
 namespace AgenticCodingLoop.Tests;
 

@@ -1,4 +1,4 @@
-namespace AgenticCodingLoop.Configuration;
+namespace AgenticCodingLoop.Shared.HostEnvironment;
 
 internal static class NonInteractiveCliEnvironment
 {
@@ -7,7 +7,7 @@ internal static class NonInteractiveCliEnvironment
         var environment = new Dictionary<string, string>(
             OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 
-        foreach (var entry in Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>())
+        foreach (var entry in System.Environment.GetEnvironmentVariables().Cast<System.Collections.DictionaryEntry>())
         {
             if (entry.Key is not string key || entry.Value is null)
             {

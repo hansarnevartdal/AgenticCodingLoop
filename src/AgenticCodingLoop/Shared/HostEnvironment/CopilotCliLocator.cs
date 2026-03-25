@@ -1,4 +1,4 @@
-namespace AgenticCodingLoop.Configuration;
+namespace AgenticCodingLoop.Shared.HostEnvironment;
 
 internal static class CopilotCliLocator
 {
@@ -6,7 +6,7 @@ internal static class CopilotCliLocator
 
     public static string Find()
     {
-        return Find(Environment.GetEnvironmentVariable(OverrideVariable), Environment.GetEnvironmentVariable("PATH"));
+        return Find(System.Environment.GetEnvironmentVariable(OverrideVariable), System.Environment.GetEnvironmentVariable("PATH"));
     }
 
     internal static string Find(string? overridePath, string? pathVariable)

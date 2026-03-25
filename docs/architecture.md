@@ -28,14 +28,14 @@ flowchart TD
 `Program.cs` is the visible orchestrator. It keeps the demo honest by showing the entire outer loop in one place:
 
 - parse the GitHub URL and choose the working folder
-- create the bootstrap context
+- execute the bootstrap feature
 - create the monitor, implementer, and reviewer sessions
 - keep polling the monitor and start worker loops only when needed
 - stop cleanly on cancellation
 
-### Bootstrap Context
+### Bootstrap Feature
 
-`BootstrapContext` owns the one-time startup plumbing that should happen before the outer loop begins:
+`BootstrapFeature` owns the one-time startup plumbing that should happen before the outer loop begins:
 
 - locate the orchestrator's `.github` folder
 - create the bootstrap client rooted in the working folder
@@ -103,27 +103,59 @@ Model selection happens per session, not per prompt. That is why bootstrap and m
 
 The implementer and reviewer loops are expected to stop when the agent determines that no more work of that type is currently available and signals that state explicitly. They are restarted by the monitor loop later if new work shows up. This keeps the long-running part of the system cheap.
 
+The reusable worker mechanics live in a shared `WorkerLoop`, while `ImplementationLoop` and `ReviewLoop` stay as thin role definitions that make it obvious how to add another agent type later.
+
 ## Runtime File Map
 
 ```text
 src/AgenticCodingLoop/
   Program.cs
-  Configuration/
+  Features/
+    Bootstrap/
+      BootstrapFeature.cs
+      RepositorySetup.cs
+      repository-setup.prompt.md
+    Monitor/
+      MonitorFeature.cs
+      monitor-loop.prompt.md
+      Tools/
+        MonitorDecisionTool.cs
+        MonitorEventTool.cs
+        MonitorWorkerStateTool.cs
+    Implementer/
+      ImplementerFeature.cs
+      implementation-loop.prompt.md
+      Tools/
+        ImplementerEventTool.cs
+        ImplementationStopTool.cs
+    Reviewer/
+      ReviewerFeature.cs
+      review-loop.prompt.md
+      Tools/
+        ReviewerEventTool.cs
+        ReviewStopTool.cs
+  Shared/
+    HostEnvironment/
+      CopilotCliLocator.cs
+      NonInteractiveCliEnvironment.cs
+      SourceGitHubLocator.cs
+    Prompts/
+      PromptLoader.cs
+    Runtime/
+      CopilotModels.cs
+      SessionDebugConsole.cs
+      WorkerLoop.cs
+      IWorkerFeature.cs
+      WorkerSessionConfigFactory.cs
+      WorkerRoleDescriptor.cs
+      WorktreeManager.cs
+  Host/
     WorkspaceConfig.cs
-    CopilotModels.cs
-    NonInteractiveCliEnvironment.cs
-    SourceGitHubLocator.cs
-    WorkerSessionConfigFactory.cs
-  Bootstrap/
-    BootstrapContext.cs
-    RepositorySetup.cs
-  Loops/
-    MonitorLoop.cs
-    ImplementationLoop.cs
-    ReviewLoop.cs
 ```
 
-Supporting bootstrap helpers such as the local CLI environment and `.github` locator live under `Configuration`, but they are intentionally omitted from the flowchart because they are implementation details rather than runtime roles.
+The repo now keeps feature-specific behavior under `Features`, while shared runtime, host-environment, and prompt-loading concerns live under `Shared`.
+
+Supporting bootstrap helpers such as the local CLI environment and `.github` locator live under `Shared/HostEnvironment`, but they are intentionally omitted from the flowchart because they are implementation details rather than runtime roles.
 
 ## What This Architecture Optimizes For
 

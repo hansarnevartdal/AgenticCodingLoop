@@ -1,4 +1,4 @@
-using AgenticCodingLoop.Configuration;
+using AgenticCodingLoop.Host;
 
 namespace AgenticCodingLoop.Tests;
 
@@ -61,5 +61,72 @@ public sealed class When_parsing_workspace_config
         Assert.NotNull(result);
         Assert.True(result.Debug);
         Assert.Equal(Path.GetFullPath(".\\tmp"), result.TempFolder);
+    }
+
+    [Fact]
+    public void Should_default_max_parallel_to_one()
+    {
+        // Arrange
+        var args = new[] { "https://github.com/owner/my-repo" };
+
+        // Act
+        var result = WorkspaceConfig.Parse(args);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result.MaxParallel);
+    }
+
+    [Fact]
+    public void Should_parse_max_parallel_option()
+    {
+        // Arrange
+        var args = new[] { "--max-parallel", "3", "https://github.com/owner/my-repo" };
+
+        // Act
+        var result = WorkspaceConfig.Parse(args);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.MaxParallel);
+    }
+
+    [Fact]
+    public void Should_reject_max_parallel_of_zero()
+    {
+        // Arrange
+        var args = new[] { "--max-parallel", "0", "https://github.com/owner/my-repo" };
+
+        // Act
+        var result = WorkspaceConfig.Parse(args);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Should_reject_negative_max_parallel()
+    {
+        // Arrange
+        var args = new[] { "--max-parallel", "-1", "https://github.com/owner/my-repo" };
+
+        // Act
+        var result = WorkspaceConfig.Parse(args);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Should_reject_max_parallel_without_value()
+    {
+        // Arrange
+        var args = new[] { "https://github.com/owner/my-repo", "--max-parallel" };
+
+        // Act
+        var result = WorkspaceConfig.Parse(args);
+
+        // Assert
+        Assert.Null(result);
     }
 }

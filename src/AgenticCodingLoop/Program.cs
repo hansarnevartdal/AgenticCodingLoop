@@ -1,7 +1,10 @@
-﻿using AgenticCodingLoop;
-using AgenticCodingLoop.Configuration;
-using AgenticCodingLoop.Bootstrap;
-using AgenticCodingLoop.Loops;
+﻿using AgenticCodingLoop.Features.Bootstrap;
+using AgenticCodingLoop.Features.Implementer;
+using AgenticCodingLoop.Features.Monitor;
+using AgenticCodingLoop.Features.Monitor.Tools;
+using AgenticCodingLoop.Features.Reviewer;
+using AgenticCodingLoop.Host;
+using AgenticCodingLoop.Shared.Runtime;
 
 // ── Validate inputs ──────────────────────────────────────────────────────────
 var config = WorkspaceConfig.Parse(args);
@@ -24,64 +27,103 @@ ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
 Console.CancelKeyPress += cancelHandler;
 
 var failed = false;
+var nextImplementerId = 0;
+var nextReviewerId = 0;
+var implementerTasks = new List<Task>();
+var reviewerTasks = new List<Task>();
 
 try
 {
-    await using var bootstrap = await BootstrapContext.CreateAsync(config, debugConsole, shutdown.Token);
+    await using var bootstrap = await BootstrapFeature.ExecuteAsync(config, debugConsole, shutdown.Token);
 
     // ── Monitor and worker loops ─────────────────────────────────────────────
     Console.WriteLine("═══ Monitoring ═══");
     Console.WriteLine();
 
-    await using var monitorLoop = await MonitorLoop.CreateAsync(bootstrap.Client, bootstrap.SourceSkills, debugConsole);
-    await using var implementationLoop = await ImplementationLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills, debugConsole);
-    await using var reviewLoop = await ReviewLoop.CreateAsync(bootstrap.Client, bootstrap.SourceGitHub, bootstrap.SourceSkills, debugConsole);
-    Task? implementerTask = null;
-    Task? reviewerTask = null;
+    var workerLoopState = new MonitorWorkerStateTool();
+    var implementerRole = new WorkerRoleDescriptor<BootstrapFeature, MonitorWorkerStateTool>(
+        WorkerType: "implementer",
+        CreateFeatureAsync: static async (bootstrapContext, worktreePath, console, workerId) =>
+            await ImplementerFeature.CreateAsync(
+                bootstrapContext.CliPath,
+                bootstrapContext.ClientEnvironment,
+                worktreePath,
+                bootstrapContext.SourceGitHub,
+                bootstrapContext.SourceSkills,
+                console,
+                workerId),
+        IncrementRunningCount: static state => state.IncrementImplementer(),
+        DecrementRunningCount: static state => state.DecrementImplementer());
+    var reviewerRole = new WorkerRoleDescriptor<BootstrapFeature, MonitorWorkerStateTool>(
+        WorkerType: "reviewer",
+        CreateFeatureAsync: static async (bootstrapContext, worktreePath, console, workerId) =>
+            await ReviewerFeature.CreateAsync(
+                bootstrapContext.CliPath,
+                bootstrapContext.ClientEnvironment,
+                worktreePath,
+                bootstrapContext.SourceGitHub,
+                bootstrapContext.SourceSkills,
+                console,
+                workerId),
+        IncrementRunningCount: static state => state.IncrementReviewer(),
+        DecrementRunningCount: static state => state.DecrementReviewer());
+    await using var monitorLoop = await MonitorFeature.CreateAsync(bootstrap.Client, bootstrap.SourceSkills, workerLoopState, debugConsole, config.MaxParallel);
 
     while (!shutdown.Token.IsCancellationRequested)
     {
-        if (implementerTask is { IsCompleted: true })
-        {
-            await implementerTask;
-            implementerTask = null;
-        }
+        await ReapCompletedTasks(implementerTasks, "implementer");
+        await ReapCompletedTasks(reviewerTasks, "reviewer");
 
-        if (reviewerTask is { IsCompleted: true })
-        {
-            await reviewerTask;
-            reviewerTask = null;
-        }
+        var decision = await monitorLoop.ExecuteAsync(shutdown.Token);
 
-        var decision = await monitorLoop.CheckAsync(shutdown.Token);
-
-        if (implementerTask is null && decision.StartImplementer)
+        var implementersToStart = Math.Max(0, Math.Min(decision.ImplementersToStart, config.MaxParallel - implementerTasks.Count));
+        for (var i = 0; i < implementersToStart; i++)
         {
-            Console.WriteLine("  Monitor: starting implementer loop.");
+            var workerId = nextImplementerId++;
+            Console.WriteLine($"  Monitor: starting implementer worker {workerId}.");
             Console.WriteLine();
 
-            implementerTask = implementationLoop.RunAsync(shutdown.Token);
+            implementerTasks.Add(RunWorker(
+                implementerRole,
+                workerId,
+                bootstrap,
+                config,
+                debugConsole,
+                workerLoopState,
+                shutdown.Token));
         }
 
-        if (reviewerTask is null && decision.StartReviewer)
+        var reviewersToStart = Math.Max(0, Math.Min(decision.ReviewersToStart, config.MaxParallel - reviewerTasks.Count));
+        for (var i = 0; i < reviewersToStart; i++)
         {
-            Console.WriteLine("  Monitor: starting reviewer loop.");
+            var workerId = nextReviewerId++;
+            Console.WriteLine($"  Monitor: starting reviewer worker {workerId}.");
             Console.WriteLine();
 
-            reviewerTask = reviewLoop.RunAsync(shutdown.Token);
+            reviewerTasks.Add(RunWorker(
+                reviewerRole,
+                workerId,
+                bootstrap,
+                config,
+                debugConsole,
+                workerLoopState,
+                shutdown.Token));
         }
 
+        // Keep the demo responsive without turning the monitor loop into a busy poll.
         await Task.Delay(TimeSpan.FromSeconds(2), shutdown.Token);
     }
 }
 catch (TimeoutException ex)
 {
     Console.Error.WriteLine($"Agent timed out: {ex.Message}");
+    shutdown.Cancel();
     failed = true;
 }
 catch (InvalidOperationException ex)
 {
     Console.Error.WriteLine($"Agent failed: {ex.Message}");
+    shutdown.Cancel();
     failed = true;
 }
 catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
@@ -90,6 +132,97 @@ catch (OperationCanceledException) when (shutdown.IsCancellationRequested)
 finally
 {
     Console.CancelKeyPress -= cancelHandler;
+    shutdown.Cancel();
+    await WaitForWorkers(implementerTasks, reviewerTasks);
 }
 
 return failed ? 1 : 0;
+
+// Keep the worker lifecycle close to the outer orchestration loop so the demo's control flow
+// stays readable in one file.
+static async Task RunWorker(
+    WorkerRoleDescriptor<BootstrapFeature, MonitorWorkerStateTool> role,
+    int workerId,
+    BootstrapFeature bootstrap,
+    WorkspaceConfig config,
+    SessionDebugConsole debugConsole,
+    MonitorWorkerStateTool workerLoopState,
+    CancellationToken ct)
+{
+    var worktreePath = await WorktreeManager.CreateAsync(config.RepoDirectory, role.WorkerType, workerId, ct);
+    var workerLabel = $"{role.WorkerType} worker {workerId}";
+    var workerCounted = false;
+
+    try
+    {
+        await using var feature = await role.CreateFeatureAsync(bootstrap, worktreePath, debugConsole, workerId);
+        role.IncrementRunningCount(workerLoopState);
+        workerCounted = true;
+        await feature.ExecuteAsync(ct);
+    }
+    catch (Exception ex) when (!workerCounted && ex is not OperationCanceledException)
+    {
+        throw new InvalidOperationException($"Failed to start {workerLabel}: {ex.Message}", ex);
+    }
+    finally
+    {
+        if (workerCounted)
+        {
+            role.DecrementRunningCount(workerLoopState);
+        }
+
+        try
+        {
+            await WorktreeManager.RemoveAsync(config.RepoDirectory, worktreePath, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to remove worktree for {workerLabel}: {ex.Message}");
+        }
+    }
+}
+
+static async Task ReapCompletedTasks(List<Task> tasks, string workerType)
+{
+    // Walk backward so removing a completed task does not shift items we have not visited yet.
+    for (var i = tasks.Count - 1; i >= 0; i--)
+    {
+        if (tasks[i].IsCompleted)
+        {
+            try
+            {
+                await tasks[i];
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"{workerType} worker failed: {ex.Message}");
+            }
+
+            tasks.RemoveAt(i);
+        }
+    }
+}
+
+static async Task WaitForWorkers(List<Task> implementerTasks, List<Task> reviewerTasks)
+{
+    var workerTasks = implementerTasks.Concat(reviewerTasks).ToArray();
+    if (workerTasks.Length is 0)
+    {
+        return;
+    }
+
+    try
+    {
+        await Task.WhenAll(workerTasks);
+    }
+    catch (Exception)
+    {
+        // Individual worker failures are reported when the tasks are reaped below.
+    }
+
+    await ReapCompletedTasks(implementerTasks, "implementer");
+    await ReapCompletedTasks(reviewerTasks, "reviewer");
+}

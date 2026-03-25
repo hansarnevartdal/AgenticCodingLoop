@@ -9,11 +9,11 @@ The process starts with one required input and one optional input:
 - a GitHub repository URL
 - an optional local working folder override
 
-`WorkspaceConfig` validates that the URL points at GitHub and derives the local clone path from the repository name. If no working folder is provided, it uses `%LOCALAPPDATA%/AgenticCodingLoop`.
+`Host/WorkspaceConfig` validates that the URL points at GitHub and derives the local clone path from the repository name. If no working folder is provided, it uses `%LOCALAPPDATA%/AgenticCodingLoop`.
 
-## 2. Build the Bootstrap Context
+## 2. Execute the Bootstrap Feature
 
-Before the outer loop starts, the bootstrap step locates the app's own `.github` folder. That folder provides:
+Before the outer loop starts, the bootstrap feature locates the app's own `.github` folder. That folder provides:
 
 - agent definitions in `.github/agents`
 - shared skills in `.github/skills`
