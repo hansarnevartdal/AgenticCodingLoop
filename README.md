@@ -9,13 +9,19 @@ The demo is intentionally simple: GitHub is the system of record, the orchestrat
 Command:
 
 ```bash
-dotnet run --project src/AgenticCodingLoop -- [--debug] <githubRepoUrl> [workingFolder]
+dotnet run --project src/AgenticCodingLoop -- [--debug] [--max-parallel <N>] <githubRepoUrl> [workingFolder]
 ```
 
 Example:
 
 ```bash
 dotnet run --project src/AgenticCodingLoop -- https://github.com/owner/my-repo
+```
+
+Higher parallelism:
+
+```bash
+dotnet run --project src/AgenticCodingLoop -- --max-parallel 3 https://github.com/owner/my-repo
 ```
 
 Debug mode:
