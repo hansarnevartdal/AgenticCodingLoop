@@ -1,4 +1,4 @@
-# Agentic Coding Loop
+![Agentic Coding Loop](logo.png)
 
 Agentic Coding Loop is a demo application that uses the [GitHub Copilot SDK](https://www.nuget.org/packages/GitHub.Copilot.SDK) to show a small multi-agent delivery workflow running against a real GitHub repository.
 
@@ -92,6 +92,8 @@ If the target repository already exists under the working folder, the bootstrap 
 
 All work state lives in GitHub through issues, pull requests, labels, and review decisions.
 
+All loop results are communicated through typed tool calls — the monitor calls `report_monitor_decision`, workers call role-specific stop tools, and all loops call `report_key_event` — so the host always receives structured, validated data instead of parsing free text.
+
 ## For Demo Presenters
 
 If you only need the speaking points:
@@ -101,3 +103,7 @@ If you only need the speaking points:
 3. Use [docs/github-integration.md](docs/github-integration.md) to explain why GitHub is the state store.
 4. Use [docs/cost-control.md](docs/cost-control.md) to explain why the monitor loop matters.
 5. Close with [docs/demo-notes.md](docs/demo-notes.md) for tradeoffs, limitations, and lessons learned.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

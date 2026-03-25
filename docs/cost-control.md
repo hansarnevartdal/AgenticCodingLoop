@@ -76,9 +76,11 @@ The monitor loop is the gate. If it does not see work, expensive sessions do not
 
 Setup, monitoring, implementation, and review are separate sessions because they have different cost and capability needs.
 
-### 4. Prefer Small, Deterministic Monitor Prompts
+### 4. Use Tool Calls for Deterministic Output
 
-The monitor prompt is basically a decision procedure that returns JSON. That makes it cheap, stable, and easy to explain.
+The monitor prompt does not ask the model to reply with JSON or structured text. Instead, the model calls the `report_monitor_decision` tool with typed, validated parameters. The same pattern applies to the worker stop tools.
+
+This avoids a common reliability problem: models sometimes wrap JSON in markdown fences, add commentary, or skip fields. Tool calls eliminate that ambiguity because the SDK handles serialization and parameter validation before the host ever sees the result.
 
 ## Tradeoff
 

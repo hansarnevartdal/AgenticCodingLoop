@@ -39,6 +39,12 @@ The worker loops use loaded skills for detailed Git and GitHub CLI behavior inst
 
 The runtime disables interactive Git and GitHub prompts and does not enable SDK user input requests. That is necessary for an unattended demo loop, but it also means prompts and workflow constraints must be clear.
 
+### 6. Tool Calls Beat Free-Text for Control Flow
+
+Every loop communicates structured results through typed tool calls rather than expecting the model to format text in a specific way. The monitor calls `report_monitor_decision`, the workers call `signal_no_more_implementation_work` or `signal_no_more_review_work`, and all loops call `report_key_event` for console output.
+
+This is a practical pattern worth highlighting: when the host needs to act on a model's output, a tool call with validated parameters is more reliable than parsing free-text or JSON from the response body.
+
 ## Limitations To Be Honest About
 
 - the orchestration is polling-based, not event-driven

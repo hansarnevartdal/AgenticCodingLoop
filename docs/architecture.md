@@ -56,11 +56,14 @@ This keeps repository preparation out of the expensive worker sessions.
 
 ### Monitor Loop
 
-The monitor loop is the coordinator. It checks GitHub state and returns a compact decision object with three booleans:
+The monitor loop is the coordinator. It checks GitHub state and reports its decision by calling the `report_monitor_decision` tool with typed parameters:
 
-- `startImplementer`
-- `startReviewer`
+- `implementersToStart`
+- `reviewersToStart`
 - `hasAnyWork`
+- `reason`
+
+Because the decision is a tool call with validated parameters — not free-text or JSON — the host always receives a structured, machine-readable result regardless of model behaviour. The monitor also calls `get_worker_loop_state` to learn how many workers are already running before deciding how many to start.
 
 It does not implement or review anything. Its job is only to decide whether the more expensive sessions should run.
 
@@ -74,12 +77,16 @@ The implementer loop performs one work iteration at a time using the `implemente
 
 That priority keeps the system from creating new work while older work is stuck waiting.
 
+When no implementation work remains, the agent calls the `signal_no_more_implementation_work` tool. The host detects that tool call to know the loop should go idle — it never has to guess from free text.
+
 ### Review Loop
 
 The review loop performs one review iteration at a time using the `reviewer` agent. It looks for PRs marked `status:ready-for-review`, reviews them, and moves them to one of two next states:
 
 - `status:approved`
 - `status:needs-work`
+
+When no review work remains, the agent calls the `signal_no_more_review_work` tool to signal the host.
 
 ### SDK Sessions
 
@@ -98,6 +105,12 @@ The runtime loads agents from the orchestrator's `.github/agents` folder through
 ### The Cost Boundary Is a Session Boundary
 
 Model selection happens per session, not per prompt. That is why bootstrap and monitoring are separate sessions from implementation and review.
+
+### Tools Are the Structured Interface
+
+Every loop communicates its result through typed tool calls, not free-text or JSON in the response body. The monitor calls `report_monitor_decision`, the workers call their respective stop tools, and all loops call `report_key_event` for console logging.
+
+This matters because tool calls have validated parameters: the host receives structured data it can act on without parsing. It removes an entire category of reliability problems around output format compliance.
 
 ### The Worker Loops Are Disposable
 

@@ -75,7 +75,7 @@ The monitor loop asks GitHub two simple questions:
 - are there open issues or PRs that imply implementation work?
 - are there PRs labeled `status:ready-for-review`?
 
-It returns a decision object instead of acting directly. That keeps the monitor focused and predictable.
+It calls `get_worker_loop_state` to see how many workers are already running, then calls the `report_monitor_decision` tool with typed parameters instead of replying with free text. That tool call is how the host receives a structured, validated decision it can act on immediately.
 
 ## 9. Implementer Runs One Iteration at a Time
 
@@ -85,7 +85,7 @@ When implementation work exists, the implementer loop wakes up and performs one 
 2. Fix a PR that needs work.
 3. Start work on the next open issue without an active PR.
 
-After each iteration, it reports back and immediately decides whether another implementation iteration is still justified.
+After each iteration, it re-checks whether more implementation work remains. If not, it calls the `signal_no_more_implementation_work` tool to tell the host this worker should go idle.
 
 ## 10. Reviewer Runs One Iteration at a Time
 
@@ -96,7 +96,11 @@ When review work exists, the reviewer loop wakes up and performs one review iter
 3. approve it or request changes
 4. update the PR status label accordingly
 
-It then immediately decides whether another review iteration is still justified.
+It then re-checks whether more review work remains. If not, it calls the `signal_no_more_review_work` tool to tell the host this worker should go idle.
+
+## 11. Event Reporting Through Tools
+
+All three loops use a `report_key_event` tool to surface high-signal milestones to the host console. This is another example of the same pattern: using tool calls rather than free-text output so the host can act on structured data.
 
 ## 11. Worker Loops Stop Themselves
 
