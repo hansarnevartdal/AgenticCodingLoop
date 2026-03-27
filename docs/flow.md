@@ -50,7 +50,7 @@ Steps 2 through 5 are owned by `BootstrapContext`, so `Program.cs` does not need
 
 The app then creates three long-lived sessions:
 
-- monitor session on `gpt-5-mini`
+- monitor session on `gpt-4.1`
 - implementer session on `gpt-5.4`
 - reviewer session on `claude-opus-4.6`
 

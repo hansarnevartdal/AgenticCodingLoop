@@ -14,8 +14,8 @@ In the Copilot SDK, the model is chosen per session. That means cost control is 
 
 | Session | Model | Cost Intent |
 |---------|-------|-------------|
-| Setup | `gpt-5-mini` | Free or low-cost operational work |
-| Monitor | `gpt-5-mini` | Cheap continuous polling |
+| Setup | `gpt-4.1` | Free or low-cost operational work |
+| Monitor | `gpt-4.1` | Cheap continuous polling |
 | Implementer | `gpt-5.4` | Spend on code generation and repo mutation |
 | Reviewer | `claude-opus-4.6` | Spend on higher-judgment review work |
 
