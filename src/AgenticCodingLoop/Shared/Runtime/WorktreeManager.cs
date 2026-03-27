@@ -4,6 +4,9 @@ namespace AgenticCodingLoop.Shared.Runtime;
 
 internal static class WorktreeManager
 {
+    private const int DeleteRetryCount = 5;
+    private static readonly TimeSpan DeleteRetryDelay = TimeSpan.FromMilliseconds(200);
+
     public static async Task<string> CreateAsync(string repoDirectory, string workerName, int workerId, CancellationToken ct)
     {
         var worktreePath = GetWorktreePath(repoDirectory, workerName, workerId);
@@ -15,6 +18,12 @@ internal static class WorktreeManager
         if (Directory.Exists(worktreePath))
         {
             await ForceRemoveWorktreeAsync(repoDirectory, worktreePath, ct);
+        }
+
+        if (Directory.Exists(worktreePath))
+        {
+            throw new InvalidOperationException(
+                $"Failed to remove stale worktree directory '{worktreePath}'. Close any process using that folder and retry.");
         }
 
         // The primary repo keeps `main` checked out, so worker worktrees start from a detached
@@ -50,26 +59,56 @@ internal static class WorktreeManager
     {
         if (await TryGitAsync(repoDirectory, $"worktree remove \"{worktreePath}\" --force", ct))
         {
+            await DeleteDirectoryIfPresentAsync(worktreePath, ct);
             return;
         }
 
         // Fallback: the directory exists but git does not recognise it as a worktree, or the
         // remove failed because a handle was still open.  Delete the directory directly and
         // prune git's worktree bookkeeping so it stops tracking the stale entry.
-        try
-        {
-            Directory.Delete(worktreePath, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best-effort; the directory may already be gone or still locked.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Best-effort; the directory may have read-only files left by git.
-        }
+        await DeleteDirectoryIfPresentAsync(worktreePath, ct);
 
         await TryGitAsync(repoDirectory, "worktree prune", ct);
+    }
+
+    internal static async Task DeleteDirectoryIfPresentAsync(string directoryPath, CancellationToken ct)
+    {
+        for (var attempt = 0; attempt < DeleteRetryCount; attempt++)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            if (!Directory.Exists(directoryPath))
+            {
+                return;
+            }
+
+            try
+            {
+                ResetAttributes(directoryPath);
+                Directory.Delete(directoryPath, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < DeleteRetryCount - 1)
+            {
+                await Task.Delay(DeleteRetryDelay, ct);
+            }
+            catch (UnauthorizedAccessException) when (attempt < DeleteRetryCount - 1)
+            {
+                await Task.Delay(DeleteRetryDelay, ct);
+            }
+        }
+    }
+
+    private static void ResetAttributes(string directoryPath)
+    {
+        var directoryInfo = new DirectoryInfo(directoryPath);
+
+        foreach (var fileSystemInfo in directoryInfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories))
+        {
+            fileSystemInfo.Attributes = FileAttributes.Normal;
+        }
+
+        directoryInfo.Attributes = FileAttributes.Normal;
     }
 
     private static async Task GitAsync(string workingDirectory, string arguments, CancellationToken ct)
