@@ -19,7 +19,7 @@ Call `get_worker_loop_state` before deciding how many workers to start. It retur
    - it is an open PR with label `status:approved` or `status:needs-work`
    - it is a non-approved open PR with unresolved or unanswered feedback from humans or bots that still requires code or PR updates
 8. Set `implementersToStart` to the number of new implementer workers needed: the number of unclaimed implementation work items, minus the number of already-running implementers (from `get_worker_loop_state`), capped at {{maxParallel}} minus the running count.
-9. Do not start an implementer only because an issue is still open when that issue is already represented by an open PR that is simply waiting for review with no unresolved feedback.
+9. An open issue with no active PR is always implementation work — start an implementer for it. The only exception is when an issue already has an open PR that is simply waiting for review with no unresolved feedback; in that case, do not start a duplicate implementer for that issue.
 10. Count how many unclaimed PRs are ready for review (for example, PRs with label `status:ready-for-review` that do not have the `claimed` label).
 11. Set `reviewersToStart` to the number of new reviewer workers needed: the number of unclaimed review-ready PRs, minus the number of already-running reviewers, capped at {{maxParallel}} minus the running count.
 12. Do not start a reviewer for PRs that are approved, marked `status:needs-work`, or otherwise not ready for review yet.
